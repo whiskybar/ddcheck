@@ -39,6 +39,6 @@ setup(
     install_requires = [
         'setuptools>=0.6b1',
     ] + requirements,
-    test_suite='test_ddcheck.run_tests.run_all'
+    test_suite = 'nose.collector',
 )
 
