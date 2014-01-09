@@ -1,10 +1,14 @@
 import sys
+import socket
+import dns.resolver
+from urlparse import urlparse, urlunparse
 from collections import namedtuple
-
 from dynect.DynectDNS import DynectRest
 
+
+DYNDNS_NAMESERVERS = ['ns4.p30.dynect.net', 'ns1.p30.dynect.net', 'ns2.p30.dynect.net', 'ns3.p30.dynect.net']
 checkpoint = namedtuple('checkpoint', ['url', 'host'])
-rest_iface = DynectRest()
+
 
 
 class DynDns(object):
@@ -39,12 +43,24 @@ class DynDns(object):
         self.disconnect()
 
 
-def resolve_ips(urls):
-    return [
-        checkpoint('http://127.0.0.1/health/', 'www.host-a.com'),
-        checkpoint('http://127.0.0.2/health/', 'www.host-a.com'),
-        checkpoint('http://127.0.0.3/health/', 'www.host-b.com'),
-    ]
+
+def _dig(qname, rdtype, nameservers):
+    resolver = dns.resolver.Resolver()
+    resolver.nameservers=[socket.gethostbyname(x) for x in nameservers]
+    return resolver.query(qname, rdtype)
+
+def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS):
+    ret = []
+    for url in urls:
+        scheme, netloc, url, params, query, fragment = urlparse(url)
+        for rdata in _dig(netloc, 'A', nameservers=nameservers):
+            ret.append(
+                checkpoint(
+                    urlunparse((scheme, rdata.address, url, params, query, fragment)),
+                    netloc
+                )
+            )
+    return ret
 
 
 def mark_down(failed_checkpoints):
