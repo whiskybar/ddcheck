@@ -7,7 +7,7 @@ from dynect.DynectDNS import DynectRest
 
 
 DYNDNS_NAMESERVERS = ['ns4.p30.dynect.net', 'ns1.p30.dynect.net', 'ns2.p30.dynect.net', 'ns3.p30.dynect.net']
-checkpoint = namedtuple('checkpoint', ['url', 'host', 'record'])
+checkpoint = namedtuple('checkpoint', ['url', 'host', 'record', 'ip'])
 
 
 
@@ -61,11 +61,13 @@ def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS):
                     urlunparse((scheme, rdata.address, url, params, query, fragment)),
                     netloc,
                     record,
+                    rdata.address,
                 )
             )
     return ret
 
 
-def remove_records(failed_checkpoints):
+def remove_records(failed_checkpoints, dyndns_credentials):
+    dyndns = DynDns(**dyndns_credentials)
     pass
 
