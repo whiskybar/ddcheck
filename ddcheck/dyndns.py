@@ -94,3 +94,14 @@ def remove_records(failed_checkpoints, dyndns_credentials):
     for zone, records in zones.items():
         for record, checkpoints in records.items():
             dyndns.remove_addresses(zone=zone, name=record, addresses=[ch.ip for ch in checkpoints])
+
+def check_points(checkpoints):
+    pool = eventlet.GreenPool()
+    failed = eventlet.Queue()
+    for cp in checkpoints:
+        pool.spawn(check_url, cp, failed, options.timeout)
+     pool.waitall()
+     if not failed.empty():
+        records = [failed.get() for _ in xrange(failed.qsize())]
+        remove_records(records) #TODO: or return the records and call this elsewhere
+
