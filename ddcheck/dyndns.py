@@ -35,16 +35,11 @@ class DynDns(object):
             self.rest_iface.execute('/Session/', 'DELETE')
         self.rest_iface = None
 
-    def zones(self):
-        response = self.rest_iface.execute('/Zone/', 'GET')
-        return response['data']
-
     def a_addresses(self, zone, name):
         ret = {}
         for url in self.rest_iface.execute('/ARecord/%s/%s/' % (zone, name), 'GET')['data']:
             ret[url] = self.rest_iface.execute(url, 'GET')['data']
         return ret
-
 
     def remove_addresses(self, zone, name, addresses):
         for url, record in self.a_addresses(zone, name).items():
@@ -57,11 +52,11 @@ class DynDns(object):
         self.disconnect()
 
 
-
 def _dig(qname, rdtype, nameservers):
     resolver = dns.resolver.Resolver()
     resolver.nameservers=[socket.gethostbyname(x) for x in nameservers]
     return resolver.query(qname, rdtype)
+
 
 def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS):
     ret = []
