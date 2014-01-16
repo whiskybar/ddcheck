@@ -84,13 +84,13 @@ def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS):
 def remove_records(failed_checkpoints, dyndns_credentials):
     def get_zone(record):
         return '.'.join(record.rsplit('.', 3)[1:])
+
     dyndns = DynDns(**dyndns_credentials)
     zones = defaultdict(lambda: defaultdict(list))
+
+    # group the failed checkpoints by zone and hostname (record)
     for checkpoint in failed_checkpoints:
         zones[get_zone(checkpoint.record)][checkpoint.record].append(checkpoint)
     for zone, records in zones.items():
         for record, checkpoints in records.items():
             dyndns.remove_addresses(zone=zone, name=record, addresses=[ch.ip for ch in checkpoints])
-            for checkpoint in checkpoints:
-                print zone, record, checkpoint
-
