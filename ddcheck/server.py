@@ -5,34 +5,33 @@ import argparse
 import os.path
 import eventlet
 from eventlet.timeout import Timeout
-from email.mime.text import MIMEText
 from eventlet.green import subprocess
 import logging
 import logging.handlers
 requests = eventlet.patcher.import_patched('requests')
 
-def scheduled_urls():
-    return [('http://173.194.70.106/', 'www.google.com')]
+from dyndns import resolve_ips
 
-def check_url(url, host, timeout):
+
+def check_url(cp, timeout):
     response = None
     try:
         with Timeout(timeout, False):
-            response = requests.get(url, headers={'Host': host})
+            response = requests.get(cp.url, headers={'Host': cp.host})
     except requests.exceptions.ConnectionError, e:
-        logging.error('%s (%s) connection failed: %s', url, host, e)
+        logging.error('%s (%s) connection failed: %s', cp.url, cp.host, e)
     except requests.exceptions.HTTPError, e:
-        logging.error('%s (%s) HTTP error: %s', url, host, e)
+        logging.error('%s (%s) HTTP error: %s', cp.url, cp.host, e)
     except requests.exceptions.RequestException, e:
-        logging.error('%s (%s) error: %s', url, host, e)
+        logging.error('%s (%s) error: %s', cp.url, cp.host, e)
     else:
         if response is None:
-            logging.warning('%s timed out after %d seconds', url, timeout)
+            logging.warning('%s timed out after %d seconds', cp.url, timeout)
         else:
             if response.status_code == requests.codes.ok:
-                logging.debug('%s hit', url)
+                logging.debug('%s hit', cp.url)
             else:
-                logging.error('%s returned %s', url, e.code)
+                logging.error('%s returned %s', cp.url, e.code)
                
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Start a ddcheck daemon')
@@ -69,11 +68,12 @@ def main():
     configure_logging(level)
 
     check_interval = options.check_interval
+    checkpoints = resolve_ips(options.urls) #TODO: green this?
     while True:
         now = time.time()
         next_check = int(now) /  check_interval * check_interval - now + check_interval + 1
-        for url, host in scheduled_urls():
-            eventlet.spawn_after(next_check, check_url, url, host, options.timeout)
+        for cp in checkpoints:
+            eventlet.spawn_after(next_check, check_url, cp, options.timeout)
         eventlet.sleep(next_check + 1)
 
 if __name__ == '__main__':
