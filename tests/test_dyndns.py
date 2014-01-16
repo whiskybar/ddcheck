@@ -77,6 +77,7 @@ class TestDynDns():
             [
                 checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1'),
                 checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'),
+                checkpoint(url='http://127.0.0.104/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'), # non existent
             ],
             {
                 'customer_name': self.customer_name,
@@ -84,8 +85,6 @@ class TestDynDns():
                 'password': self.password,
             }
         )
-        root_records = [
-        ]
         tools.assert_equal(
             set([
                 '127.0.0.2',
@@ -117,12 +116,3 @@ class TestDynDns():
 
 
 
-    """
-    def test_remove_non_exitent_records(self):
-        remove_records([
-            checkpoint(url='http://127.0.0.100/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone),
-        ])
-        remove_records([
-            checkpoint(url='http://127.0.0.2/health/', host='cname2.%s' % self.zone, record='xxx.%s.' % self.zone),
-        ])
-        """
