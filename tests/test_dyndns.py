@@ -24,12 +24,12 @@ def test_resolve_ips(dig):
     tools.assert_equal(
         set(
             [
-                checkpoint(url='http://173.194.70.104/', host='www.google.com', record='www.google.com.'),
-                checkpoint(url='http://173.194.70.147/', host='www.google.com', record='www.google.com.'),
-                checkpoint(url='http://173.194.70.106/', host='www.google.com', record='www.google.com.'),
-                checkpoint(url='http://173.194.70.99/', host='www.google.com', record='www.google.com.'),
-                checkpoint(url='http://93.184.216.119/test/', host='www.example.com', record='www.example.com.'),
-                checkpoint(url='http://23.51.166.151/health/', host='web.mit.edu', record='e7086.b.akamaiedge.net.')
+                checkpoint(url='http://173.194.70.104/', host='www.google.com', record='www.google.com.', ip='173.194.70.104'),
+                checkpoint(url='http://173.194.70.147/', host='www.google.com', record='www.google.com.', ip='173.194.70.147'),
+                checkpoint(url='http://173.194.70.106/', host='www.google.com', record='www.google.com.', ip='173.194.70.106'),
+                checkpoint(url='http://173.194.70.99/', host='www.google.com', record='www.google.com.', ip='173.194.70.99'),
+                checkpoint(url='http://93.184.216.119/test/', host='www.example.com', record='www.example.com.', ip='93.184.216.119'),
+                checkpoint(url='http://23.51.166.151/health/', host='web.mit.edu', record='e7086.b.akamaiedge.net.', ip='23.51.166.151')
             ]
         ),
         set(
@@ -73,12 +73,18 @@ class TestDynDns():
         self.rest_iface.execute('/Zone/%s/' % self.zone, 'PUT', {'publish': 'true'})
 
     def test_remove_records(self):
-        remove_records([
-            checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone),
-            checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone),
-        ])
-        root_records = [
-        ]
+        remove_records(
+            [
+                checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1'),
+                checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'),
+                checkpoint(url='http://127.0.0.104/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'), # non existent
+            ],
+            {
+                'customer_name': self.customer_name,
+                'user_name': self.user_name,
+                'password': self.password,
+            }
+        )
         tools.assert_equal(
             set([
                 '127.0.0.2',
@@ -110,12 +116,3 @@ class TestDynDns():
 
 
 
-    """
-    def test_remove_non_exitent_records(self):
-        remove_records([
-            checkpoint(url='http://127.0.0.100/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone),
-        ])
-        remove_records([
-            checkpoint(url='http://127.0.0.2/health/', host='cname2.%s' % self.zone, record='xxx.%s.' % self.zone),
-        ])
-        """
