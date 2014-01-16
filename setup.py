@@ -28,7 +28,7 @@ setup(
     ),
     entry_points = {
         'console_scripts': [
-            'ddcheck = ddcheck.server:main',
+            'ddcheck = ddcheck.console:main',
         ],
     },
 

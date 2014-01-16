@@ -1,17 +1,10 @@
-import sys
-import time
-import signal
-import argparse
-import os.path
+import logging
+
 import eventlet
 from eventlet.timeout import Timeout
-from eventlet.green import subprocess
-import logging
-import logging.handlers
 requests = eventlet.patcher.import_patched('requests')
 
-from dyndns import resolve_ips
-
+from ddcheck.dyndns import remove_records
 
 def check_url(cp, failed, timeout):
     response = None
@@ -35,56 +28,14 @@ def check_url(cp, failed, timeout):
                 logging.debug('%s hit', cp.url)
             else:
                 logging.error('%s returned %s', cp.url, e.code)
-               
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='Start a ddcheck daemon')
-    parser.add_argument('urls', metavar='URL', nargs='+', help='URL to check')
-    parser.add_argument('-d', '--debug', default=False, action='store_true', help='debug mode on')
-    parser.add_argument('-i', '--check-interval', default=10, type=int, help='check interval')
-    parser.add_argument('-t', '--timeout', default=5, type=int, help='URL timeout')
-    return parser.parse_args()
-    
-def shutdown(signal, frame):
-    sys.exit(0)
 
-def configure_logging(level):
-    logging.basicConfig(format='%(asctime)s %(message)s', level=level)
-    rh = logging.handlers.TimedRotatingFileHandler(
-        filename='/tmp/ddcheck.log',
-        when='midnight',
-    )
-    rh.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
-    rootLogger = logging.getLogger('')
-    rootLogger.removeHandler(rootLogger.handlers[0])
-    rootLogger.setLevel(logging.DEBUG)
-    rootLogger.addHandler(rh)
-
-def main():
-    signal.signal(signal.SIGTERM, shutdown)
-    signal.signal(signal.SIGINT, shutdown)
-
-    options = parse_arguments()
-    if options.debug:
-        level = logging.DEBUG
-    else:
-        level = logging.WARNING
-    configure_logging(level)
-
-    check_interval = options.check_interval
-    checkpoints = resolve_ips(options.urls) #TODO: green this?
-
+def check(checkpoints, timeout):
     pool = eventlet.GreenPool()
     failed = eventlet.Queue()
-    while True:
-        now = time.time()
-        next_check = int(now) /  check_interval * check_interval - now + check_interval + 1
-        for cp in checkpoints:
-            pool.spawn_after(next_check, check_url, cp, failed, options.timeout)
-        pool.waitall()
-        if not failed.empty():
-            records = [failed.get() for _ in xrange(failed.qsize())]
-            remove_records(records)
-
-if __name__ == '__main__':
-    main()
+    for cp in checkpoints:
+        pool.spawn(check_url, cp, failed, timeout)
+    pool.waitall()
+    if not failed.empty():
+        records = [failed.get() for _ in xrange(failed.qsize())]
+        remove_records(records) #TODO: or return the records and call this elsewhere
 
