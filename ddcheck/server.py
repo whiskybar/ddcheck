@@ -13,20 +13,23 @@ requests = eventlet.patcher.import_patched('requests')
 from dyndns import resolve_ips
 
 
-def check_url(cp, timeout):
+def check_url(cp, failed, timeout):
     response = None
     try:
         with Timeout(timeout, False):
             response = requests.get(cp.url, headers={'Host': cp.host})
     except requests.exceptions.ConnectionError, e:
         logging.error('%s (%s) connection failed: %s', cp.url, cp.host, e)
+        failed.put(cp)
     except requests.exceptions.HTTPError, e:
         logging.error('%s (%s) HTTP error: %s', cp.url, cp.host, e)
     except requests.exceptions.RequestException, e:
         logging.error('%s (%s) error: %s', cp.url, cp.host, e)
+        failed.put(cp)
     else:
         if response is None:
             logging.warning('%s timed out after %d seconds', cp.url, timeout)
+            failed.put(cp)
         else:
             if response.status_code == requests.codes.ok:
                 logging.debug('%s hit', cp.url)
@@ -69,12 +72,18 @@ def main():
 
     check_interval = options.check_interval
     checkpoints = resolve_ips(options.urls) #TODO: green this?
+
+    pool = eventlet.GreenPool()
+    failed = eventlet.Queue()
     while True:
         now = time.time()
         next_check = int(now) /  check_interval * check_interval - now + check_interval + 1
         for cp in checkpoints:
-            eventlet.spawn_after(next_check, check_url, cp, options.timeout)
-        eventlet.sleep(next_check + 1)
+            pool.spawn_after(next_check, check_url, cp, failed, options.timeout)
+        pool.waitall()
+        if not failed.empty():
+            records = [failed.get() for _ in xrange(failed.qsize())]
+            remove_records(records)
 
 if __name__ == '__main__':
     main()
