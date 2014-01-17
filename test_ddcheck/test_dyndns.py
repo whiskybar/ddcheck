@@ -30,6 +30,8 @@ class TestDynDns():
         self.rest_iface.execute('/ARecord/%s/root.%s/' % (self.zone, self.zone), 'POST', {'rdata': {'address': '127.0.0.2'}, 'ttl': 10})
         self.rest_iface.execute('/ARecord/%s/root.%s/' % (self.zone, self.zone), 'POST', {'rdata': {'address': '127.0.0.3'}, 'ttl': 10})
         self.rest_iface.execute('/ARecord/%s/root.%s/' % (self.zone, self.zone), 'POST', {'rdata': {'address': '127.0.0.4'}, 'ttl': 10})
+        self.rest_iface.execute('/AAAARecord/%s/root.%s/' % (self.zone, self.zone), 'POST', {'rdata': {'address': '::1'}, 'ttl': 10})
+        self.rest_iface.execute('/AAAARecord/%s/root.%s/' % (self.zone, self.zone), 'POST', {'rdata': {'address': '::2'}, 'ttl': 10})
         self.rest_iface.execute('/CNAMERecord/%s/cname1.%s/' % (self.zone, self.zone), 'POST', {'rdata': {'cname': 'root.%s.' % self.zone}, 'ttl': 10})
         self.rest_iface.execute('/CNAMERecord/%s/cname2.%s/' % (self.zone, self.zone), 'POST', {'rdata': {'cname': 'cname1.%s.' % self.zone}, 'ttl': 10})
         self.rest_iface.execute('/Zone/%s/' % self.zone, 'PUT', {'publish': 'true'})
@@ -37,9 +39,10 @@ class TestDynDns():
     def test_remove_records(self):
         remove_records(
             [
-                Checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1'),
-                Checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'),
-                Checkpoint(url='http://127.0.0.104/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'), # non existent
+                Checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1', type='A'),
+                Checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'),
+                Checkpoint(url='http://127.0.0.104/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'), # non existent
+                Checkpoint(url='http://[::2]/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='::2', type='AAAA'), # ipv6
             ],
             {
                 'customer_name': self.customer_name,
@@ -48,6 +51,7 @@ class TestDynDns():
             },
             dry_run=False,
         )
+        # IPv4 removed
         tools.assert_equal(
             set([
                 '127.0.0.2',
@@ -58,8 +62,19 @@ class TestDynDns():
                 for url in
                 self.rest_iface.execute('/ARecord/%s/root.%s/' % (self.zone, self.zone), 'GET')['data']
             ])
-
         )
+        # IPv6 removed
+        tools.assert_equal(
+            set([
+                '::1',
+            ]),
+            set([
+                self.rest_iface.execute(url, 'GET')['data']['rdata']['address']
+                for url in
+                self.rest_iface.execute('/AAAARecord/%s/root.%s/' % (self.zone, self.zone), 'GET')['data']
+            ])
+        )
+        # CNAMEs kept
         tools.assert_equal(
             [{u'cname': u'root.pantheondnstestdomain.com.'}],
             [
