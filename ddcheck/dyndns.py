@@ -67,17 +67,27 @@ class DynDns(object):
             self.rest_iface.execute('/Session/', 'DELETE')
         self.rest_iface = None
 
-    def a_addresses(self, zone, name):
+    def zone_addresses(self, zone, name):
         ret = {}
-        for url in self.rest_iface.execute('/ARecord/%s/%s/' % (zone, name), 'GET')['data']:
-            ret[url] = self.rest_iface.execute(url, 'GET')['data']
+        for type in ['ARecord', 'AAAARecord']:
+            for url in self.rest_iface.execute('/%s/%s/%s/' % (type, zone, name), 'GET')['data']:
+                ret[url] = self.rest_iface.execute(url, 'GET')['data']
         return ret
 
     def remove_addresses(self, zone, name, addresses):
-        for url, record in self.a_addresses(zone, name).items():
+        for url, record in self.zone_addresses(zone, name).iteritems():
             if record['rdata']['address'] in addresses:
                 self.rest_iface.execute(url, 'DELETE')
         self.rest_iface.execute('/Zone/%s/' % zone, 'PUT', {'publish': 'true'})
+
+    def remove_records(checkpoints):
+        zones = defaultdict(lambda: defaultdict(list))
+        for checkpoint in checkpoints:
+            zone = '.'.join(checkpoint.record.rsplit('.', 3)[1:])
+            zones[zone][checkpoint.record].append(checkpoint)
+        for zone, records in zones.iteritems():
+            for record, checkpoints in records.iteritems():
+                self.remove_addresses(zone=zone, name=record, addresses=[cp.ip for cp in checkpoints])
 
     def __del__(self):
         self.disconnect()
