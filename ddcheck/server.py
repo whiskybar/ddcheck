@@ -3,9 +3,7 @@ import logging
 import eventlet
 from eventlet.timeout import Timeout
 
-requests = eventlet.patcher.import_patched('requests')
-#requests = eventlet.patcher.import_patched('requests.__init__')
-#requests.exceptions = eventlet.patcher.import_patched('requests.exceptions')
+requests = eventlet.patcher.import_patched('requests.__init__')
 
 from ddcheck.resolver import resolve_ips
 from ddcheck.dyndns import remove_records
@@ -17,13 +15,13 @@ def check_url(checkpoint, failed, error_codes, timeout):
     try:
         with Timeout(timeout, False):
             response = requests.get(checkpoint.url, headers={'Host': checkpoint.host})
-    except requests.exceptions.ConnectionError, e:
+    except requests.ConnectionError, e:
         logging.error('%s (%s) connection failed: %s', checkpoint.url, checkpoint.host, e)
         failed.put(checkpoint)
-    except requests.exceptions.HTTPError, e:
+    except requests.HTTPError, e:
         logging.error('%s (%s) HTTP error: %s', checkpoint.url, checkpoint.host, e)
         failed.put(checkpoint)
-    except requests.exceptions.RequestException, e:
+    except requests.RequestException, e:
         logging.error('%s (%s) error: %s', checkpoint.url, checkpoint.host, e)
         failed.put(checkpoint)
     else:
