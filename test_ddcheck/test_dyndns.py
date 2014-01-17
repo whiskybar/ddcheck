@@ -3,6 +3,7 @@ from nose import tools, SkipTest
 from dynect.DynectDNS import DynectRest
 
 from ddcheck.dyndns import remove_records
+from ddcheck.resolver import Checkpoint
 
 
 
@@ -44,7 +45,8 @@ class TestDynDns():
                 'customer_name': self.customer_name,
                 'user_name': self.user_name,
                 'password': self.password,
-            }
+            },
+            dry_run=False,
         )
         tools.assert_equal(
             set([

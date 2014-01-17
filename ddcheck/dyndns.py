@@ -3,10 +3,9 @@ import logging
 from collections import defaultdict
 from dynect.DynectDNS import DynectRest
 
+
+
 logger = logging.getLogger()
-
-DYNDNS_NAMESERVERS = ['ns4.p30.dynect.net', 'ns1.p30.dynect.net', 'ns2.p30.dynect.net', 'ns3.p30.dynect.net']
-
 
 
 class DynDns(object):

@@ -1,9 +1,14 @@
+import logging
 import socket
 import dns.resolver
 from urlparse import urlparse, urlunparse
 from collections import namedtuple
 
+
+
+DYNDNS_NAMESERVERS = ['ns4.p30.dynect.net', 'ns1.p30.dynect.net', 'ns2.p30.dynect.net', 'ns3.p30.dynect.net']
 Checkpoint = namedtuple('checkpoint', ['url', 'host', 'record', 'ip'])
+logger = logging.getLogger()
 
 
 def _dig(qname, rdtype, nameservers):
