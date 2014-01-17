@@ -1,48 +1,9 @@
 import os
 from nose import tools, SkipTest
-from mock import MagicMock, patch
-import dns.resolver
 from dynect.DynectDNS import DynectRest
 
-from ddcheck.dyndns import resolve_ips, checkpoint, remove_records, _dig
+from ddcheck.dyndns import remove_records
 
-
-class FakeDnsAnswer(list):
-    def __init__(self, data, name):
-        self.rrset = MagicMock()
-        self.rrset.name.to_text.return_value = name
-        super(FakeDnsAnswer, self).__init__([MagicMock(address = i) for i in data])
-
-@patch('ddcheck.dyndns._dig')
-def test_resolve_ips(dig):
-    dig.side_effect = [
-            FakeDnsAnswer(['173.194.70.104', '173.194.70.147', '173.194.70.106', '173.194.70.99'], name='www.google.com.'),
-            FakeDnsAnswer(['93.184.216.119'], name='www.example.com.'),
-            FakeDnsAnswer(['23.51.166.151'], name='e7086.b.akamaiedge.net.'),
-
-    ]
-    tools.assert_equal(
-        set(
-            [
-                checkpoint(url='http://173.194.70.104/', host='www.google.com', record='www.google.com.', ip='173.194.70.104'),
-                checkpoint(url='http://173.194.70.147/', host='www.google.com', record='www.google.com.', ip='173.194.70.147'),
-                checkpoint(url='http://173.194.70.106/', host='www.google.com', record='www.google.com.', ip='173.194.70.106'),
-                checkpoint(url='http://173.194.70.99/', host='www.google.com', record='www.google.com.', ip='173.194.70.99'),
-                checkpoint(url='http://93.184.216.119/test/', host='www.example.com', record='www.example.com.', ip='93.184.216.119'),
-                checkpoint(url='http://23.51.166.151/health/', host='web.mit.edu', record='e7086.b.akamaiedge.net.', ip='23.51.166.151')
-            ]
-        ),
-        set(
-            resolve_ips(
-                [
-                    'http://www.google.com/',
-                    'http://www.example.com/test/',
-                    'http://web.mit.edu/health/', # CNAME
-                ],
-                ['8.8.8.8'],
-            )
-        )
-    )
 
 
 class TestDynDns():
@@ -75,9 +36,9 @@ class TestDynDns():
     def test_remove_records(self):
         remove_records(
             [
-                checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1'),
-                checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'),
-                checkpoint(url='http://127.0.0.104/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'), # non existent
+                Checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1'),
+                Checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'),
+                Checkpoint(url='http://127.0.0.104/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4'), # non existent
             ],
             {
                 'customer_name': self.customer_name,
