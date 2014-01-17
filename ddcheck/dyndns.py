@@ -88,7 +88,7 @@ def remove_records(failed_checkpoints, dyndns_credentials, dry_run):
     def get_zone(record):
         return '.'.join(record.rsplit('.', 3)[1:])
 
-    dyndns = DynDns(**dyndns_credentials, dry_run=dry_run)
+    dyndns = DynDns(dry_run=dry_run, **dyndns_credentials)
     zones = defaultdict(lambda: defaultdict(list))
 
     # group the failed checkpoints by zone and hostname (record)
