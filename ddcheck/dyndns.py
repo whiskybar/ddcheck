@@ -46,6 +46,7 @@ class DynDns(object):
         self.password = password
         self.dry_run = dry_run
         self.connect()
+        self._changed_zones = set([])
 
     def connect(self):
         if self.dry_run:
@@ -67,32 +68,41 @@ class DynDns(object):
             self.rest_iface.execute('/Session/', 'DELETE')
         self.rest_iface = None
 
-    def zone_addresses(self, zone, name):
+    def zone_addresses(self, zone, name, type):
         ret = {}
-        for type in ['ARecord', 'AAAARecord']:
-            for url in self.rest_iface.execute('/%s/%s/%s/' % (type, zone, name), 'GET')['data']:
-                ret[url] = self.rest_iface.execute(url, 'GET')['data']
+        for url in self.rest_iface.execute('/%sRecord/%s/%s/' % (type, zone, name), 'GET')['data']:
+            ret[url] = self.rest_iface.execute(url, 'GET')['data']
         return ret
 
-    def remove_addresses(self, zone, name, addresses):
-        current_addresess = self.zone_addresses(zone, name).items()
+    def remove_addresses(self, zone, name, addresses, type):
+        current_addresess = self.zone_addresses(zone, name, type).items()
         to_delete = []
         for url, record in current_addresess:
             if record['rdata']['address'] in addresses:
-                to_delete.append(url)
+                to_delete.append((url, record['rdata']['address']))
         if len(current_addresess) > len(to_delete):
-            for url in to_delete:
+            for url, address in to_delete:
+                logging.info('%s (%s) seems down. Removing', addresses, name)
                 self.rest_iface.execute(url, 'DELETE')
-        self.rest_iface.execute('/Zone/%s/' % zone, 'PUT', {'publish': 'true'})
+                self._changed_zones.add(zone)
+        else:
+            logging.warning('All IPs (%s) for the record (%s) seems down. Doing nothing.', ", ".join(addresses), name)
+
+    def publish(self, zone):
+        if zone in self._changed_zones:
+            self.rest_iface.execute('/Zone/%s/' % zone, 'PUT', {'publish': 'true'})
+            self._changed_zones.remove(zone)
 
     def remove_records(self, checkpoints):
-        zones = defaultdict(lambda: defaultdict(list))
+        zones = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         for checkpoint in checkpoints:
             zone = '.'.join(checkpoint.record.rsplit('.', 3)[1:])
-            zones[zone][checkpoint.record].append(checkpoint)
+            zones[zone][checkpoint.record][checkpoint.type].append(checkpoint)
         for zone, records in zones.iteritems():
-            for record, checkpoints in records.iteritems():
-                self.remove_addresses(zone=zone, name=record, addresses=[cp.ip for cp in checkpoints])
+            for record, types in records.iteritems():
+                for type, checkpoints in types.iteritems():
+                    self.remove_addresses(zone=zone, name=record, addresses=[cp.ip for cp in checkpoints], type=type)
+            self.publish(zone)
 
     def __del__(self):
         self.disconnect()

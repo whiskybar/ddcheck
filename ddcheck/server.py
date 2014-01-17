@@ -46,7 +46,7 @@ def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, dyndns_credentia
     pool.waitall()
     if not failed.empty():
         records = list(failed.queue)
-        dyndns.remove_records(records, dyndns_credentials=dyndns_credentials, dry_run=dry_run) #TODO: or return the records and call this elsewhere
+        dyndns.remove_records(records) #TODO: or return the records and call this elsewhere
 
 
 def healthcheck_daemon(urls, wait=60, error_codes=[], timeout=5, dry_run=False, dyndns_credentials={}):
