@@ -30,7 +30,7 @@ def test_error_not_in_error_codes_should_pass():
 
 @responses.activate
 def test_when_an_error_is_specified_put_checkpoint_to_failures():
-    checkpoint = Checkpoint(url='http://199.16.156.6/', host='twitter.com', record='twitter.com.', ip='199.16.156.6', type='A')
+    checkpoint = Checkpoint(url='http://199.16.156.6/api/1/foobar', host='twitter.com', record='twitter.com.', ip='199.16.156.6', type='A')
 
     responses.add(responses.GET, 'http://199.16.156.6/api/1/foobar',
                   body='{"error": "not found"}', status=404,
