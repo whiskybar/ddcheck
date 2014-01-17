@@ -91,6 +91,24 @@ class TestDynDns():
                 self.rest_iface.execute('/CNAMERecord/%s/cname2.%s/' % (self.zone, self.zone), 'GET')['data']
             ]
         )
+        dyndns.remove_records(
+            [
+                Checkpoint(url='http://127.0.0.2/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1', type='A'),
+                Checkpoint(url='http://127.0.0.3/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'),
+            ],
+        )
+        # IPv4 not removed - we are not deleting when all records fails
+        tools.assert_equal(
+            set([
+                '127.0.0.2',
+                '127.0.0.3',
+            ]),
+            set([
+                self.rest_iface.execute(url, 'GET')['data']['rdata']['address']
+                for url in
+                self.rest_iface.execute('/ARecord/%s/root.%s/' % (self.zone, self.zone), 'GET')['data']
+            ])
+        )
 
 
 

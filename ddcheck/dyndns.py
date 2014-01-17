@@ -75,8 +75,13 @@ class DynDns(object):
         return ret
 
     def remove_addresses(self, zone, name, addresses):
-        for url, record in self.zone_addresses(zone, name).iteritems():
+        current_addresess = self.zone_addresses(zone, name).items()
+        to_delete = []
+        for url, record in current_addresess:
             if record['rdata']['address'] in addresses:
+                to_delete.append(url)
+        if len(current_addresess) > len(to_delete):
+            for url in to_delete:
                 self.rest_iface.execute(url, 'DELETE')
         self.rest_iface.execute('/Zone/%s/' % zone, 'PUT', {'publish': 'true'})
 
