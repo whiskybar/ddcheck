@@ -2,7 +2,7 @@ import os
 from nose import tools, SkipTest
 from dynect.DynectDNS import DynectRest
 
-from ddcheck.dyndns import remove_records
+from ddcheck.dyndns import DynDns
 from ddcheck.resolver import Checkpoint
 
 
@@ -37,19 +37,19 @@ class TestDynDns():
         self.rest_iface.execute('/Zone/%s/' % self.zone, 'PUT', {'publish': 'true'})
 
     def test_remove_records(self):
-        remove_records(
+        dyndns = DynDns(
+            dry_run=False,
+            customer_name=self.customer_name,
+            user_name=self.user_name,
+            password=self.password,
+        )
+        dyndns.remove_records(
             [
                 Checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1', type='A'),
                 Checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'),
                 Checkpoint(url='http://127.0.0.104/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'), # non existent
                 Checkpoint(url='http://[::2]/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='::2', type='AAAA'), # ipv6
             ],
-            {
-                'customer_name': self.customer_name,
-                'user_name': self.user_name,
-                'password': self.password,
-            },
-            dry_run=False,
         )
         # IPv4 removed
         tools.assert_equal(

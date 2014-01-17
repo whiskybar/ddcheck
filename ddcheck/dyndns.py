@@ -80,7 +80,7 @@ class DynDns(object):
                 self.rest_iface.execute(url, 'DELETE')
         self.rest_iface.execute('/Zone/%s/' % zone, 'PUT', {'publish': 'true'})
 
-    def remove_records(checkpoints):
+    def remove_records(self, checkpoints):
         zones = defaultdict(lambda: defaultdict(list))
         for checkpoint in checkpoints:
             zone = '.'.join(checkpoint.record.rsplit('.', 3)[1:])
@@ -92,19 +92,4 @@ class DynDns(object):
     def __del__(self):
         self.disconnect()
 
-
-# TODO This should be method on DynDns. So it would connect only once.
-def remove_records(failed_checkpoints, dyndns_credentials, dry_run):
-    def get_zone(record):
-        return '.'.join(record.rsplit('.', 3)[1:])
-
-    dyndns = DynDns(dry_run=dry_run, **dyndns_credentials)
-    zones = defaultdict(lambda: defaultdict(list))
-
-    # group the failed checkpoints by zone and hostname (record)
-    for checkpoint in failed_checkpoints:
-        zones[get_zone(checkpoint.record)][checkpoint.record].append(checkpoint)
-    for zone, records in zones.items():
-        for record, checkpoints in records.items():
-            dyndns.remove_addresses(zone=zone, name=record, addresses=[ch.ip for ch in checkpoints])
 

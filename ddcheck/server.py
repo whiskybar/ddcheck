@@ -6,7 +6,7 @@ from eventlet.timeout import Timeout
 requests = eventlet.patcher.import_patched('requests.__init__')
 
 from ddcheck.resolver import resolve_ips
-from ddcheck.dyndns import remove_records
+from ddcheck.dyndns import DynDns
 
 
 
@@ -40,12 +40,14 @@ def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, dyndns_credentia
     checkpoints = resolve_ips(urls) #TODO: green this?
     pool = eventlet.GreenPool()
     failed = eventlet.Queue()
+    dyndns = DynDns(dry_run=dry_run, **dyndns_credentials)
     for checkpoint in checkpoints:
         pool.spawn(check_url, checkpoint, failed, error_codes, timeout)
     pool.waitall()
     if not failed.empty():
         records = list(failed.queue)
-        remove_records(records, dyndns_credentials=dyndns_credentials, dry_run=dry_run) #TODO: or return the records and call this elsewhere
+        dyndns.remove_records(records, dyndns_credentials=dyndns_credentials, dry_run=dry_run) #TODO: or return the records and call this elsewhere
+
 
 def healthcheck_daemon(urls, wait=60, error_codes=[], timeout=5, dry_run=False, dyndns_credentials={}):
     pass
