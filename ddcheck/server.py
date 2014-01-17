@@ -2,7 +2,10 @@ import logging
 
 import eventlet
 from eventlet.timeout import Timeout
+
 requests = eventlet.patcher.import_patched('requests')
+#requests = eventlet.patcher.import_patched('requests.__init__')
+#requests.exceptions = eventlet.patcher.import_patched('requests.exceptions')
 
 from ddcheck.resolver import resolve_ips
 from ddcheck.dyndns import remove_records
