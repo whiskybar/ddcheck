@@ -7,7 +7,7 @@ from collections import namedtuple
 
 
 DYNDNS_NAMESERVERS = ['ns4.p30.dynect.net', 'ns1.p30.dynect.net', 'ns2.p30.dynect.net', 'ns3.p30.dynect.net']
-Checkpoint = namedtuple('checkpoint', ['url', 'host', 'record', 'ip'])
+Checkpoint = namedtuple('checkpoint', ['url', 'host', 'record', 'ip', 'type'])
 logger = logging.getLogger()
 
 
@@ -22,18 +22,24 @@ def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS):
     for url in urls:
         logger.debug('Resolving %s', url)
         scheme, netloc, url, params, query, fragment = urlparse(url)
-        answer = _dig(netloc, 'A', nameservers=nameservers)
-        record = answer.rrset.name.to_text()
-        for rdata in answer:
-            ret.append(
-                Checkpoint(
-                    urlunparse((scheme, rdata.address, url, params, query, fragment)),
-                    netloc,
-                    record,
-                    rdata.address,
+        for record_type in ['A', 'AAAA']:
+            answer = _dig(netloc, record_type, nameservers=nameservers)
+            record = answer.rrset.name.to_text()
+            for rdata in answer:
+                if record_type == 'AAAA':
+                    address_part = '[%s]' % rdata.address
+                else:
+                    address_part = rdata.address
+                ret.append(
+                    Checkpoint(
+                        urlunparse((scheme, address_part, url, params, query, fragment)),
+                        netloc,
+                        record,
+                        rdata.address,
+                        record_type,
+                    )
                 )
-            )
-            logger.debug('Found health check point:  %s', ret[-1])
+                logger.debug('Found health check point:  %s', ret[-1])
     return ret
 
 
