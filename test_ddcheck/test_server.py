@@ -16,7 +16,7 @@ def test_non_existing_host_get_to_failed():
 
 @responses.activate
 def test_error_not_in_error_codes_should_pass():
-    checkpoint = Checkpoint(url='http://199.16.156.6/', host='twitter.com', record='twitter.com.', ip='199.16.156.6', type='A')
+    checkpoint = Checkpoint(url='http://199.16.156.6/api/1/foobar', host='twitter.com', record='twitter.com.', ip='199.16.156.6', type='A')
 
     responses.add(responses.GET, 'http://199.16.156.6/api/1/foobar',
                   body='{"error": "not found"}', status=404,
