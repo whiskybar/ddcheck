@@ -4,7 +4,8 @@ import eventlet
 from eventlet.timeout import Timeout
 requests = eventlet.patcher.import_patched('requests')
 
-from ddcheck.dyndns import remove_records, resolve_ips
+from ddcheck.resolver import resolve_ips
+from ddcheck.dyndns import remove_records
 
 
 
