@@ -1,2 +1,4 @@
 nose
 mock
+responses
+-r requirements.txt
