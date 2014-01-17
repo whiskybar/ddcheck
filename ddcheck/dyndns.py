@@ -1,10 +1,12 @@
 import sys
 import socket
+import logging
 import dns.resolver
 from urlparse import urlparse, urlunparse
 from collections import namedtuple, defaultdict
 from dynect.DynectDNS import DynectRest
 
+logger = logging.getLogger()
 
 DYNDNS_NAMESERVERS = ['ns4.p30.dynect.net', 'ns1.p30.dynect.net', 'ns2.p30.dynect.net', 'ns3.p30.dynect.net']
 checkpoint = namedtuple('checkpoint', ['url', 'host', 'record', 'ip'])
@@ -61,6 +63,7 @@ def _dig(qname, rdtype, nameservers):
 def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS):
     ret = []
     for url in urls:
+        logger.debug('Resolving %s', url)
         scheme, netloc, url, params, query, fragment = urlparse(url)
         answer = _dig(netloc, 'A', nameservers=nameservers)
         record = answer.rrset.name.to_text()
@@ -73,10 +76,12 @@ def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS):
                     rdata.address,
                 )
             )
+            logger.debug('Found health check point:  %s', ret[-1])
     return ret
 
 
-def remove_records(failed_checkpoints, dyndns_credentials):
+# TODO This should be method on DynDns. So it would connect only once.
+def remove_records(failed_checkpoints, dyndns_credentials, dry_run):
     def get_zone(record):
         return '.'.join(record.rsplit('.', 3)[1:])
 

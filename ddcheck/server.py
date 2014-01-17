@@ -4,38 +4,48 @@ import eventlet
 from eventlet.timeout import Timeout
 requests = eventlet.patcher.import_patched('requests')
 
-from ddcheck.dyndns import remove_records
+from ddcheck.dyndns import remove_records, resolve_ips
 
-def check_url(cp, failed, timeout):
+
+
+def check_url(checkpoint, failed, error_codes, timeout):
     response = None
     try:
         with Timeout(timeout, False):
-            response = requests.get(cp.url, headers={'Host': cp.host})
+            response = requests.get(checkpoint.url, headers={'Host': checkpoint.host})
     except requests.exceptions.ConnectionError, e:
-        logging.error('%s (%s) connection failed: %s', cp.url, cp.host, e)
-        failed.put(cp)
+        logging.error('%s (%s) connection failed: %s', checkpoint.url, checkpoint.host, e)
+        failed.put(checkpoint)
     except requests.exceptions.HTTPError, e:
-        logging.error('%s (%s) HTTP error: %s', cp.url, cp.host, e)
+        logging.error('%s (%s) HTTP error: %s', checkpoint.url, checkpoint.host, e)
+        failed.put(checkpoint)
     except requests.exceptions.RequestException, e:
-        logging.error('%s (%s) error: %s', cp.url, cp.host, e)
-        failed.put(cp)
+        logging.error('%s (%s) error: %s', checkpoint.url, checkpoint.host, e)
+        failed.put(checkpoint)
     else:
         if response is None:
-            logging.warning('%s timed out after %d seconds', cp.url, timeout)
-            failed.put(cp)
+            logging.warning('%s timed out after %d seconds', checkpoint.url, timeout)
+            failed.put(checkpoint)
         else:
-            if response.status_code == requests.codes.ok:
-                logging.debug('%s hit', cp.url)
+            if response.status_code not in error_codes:
+                logging.debug('%s hit -> %s (OK)', checkpoint.url, response.status_code)
             else:
-                logging.error('%s returned %s', cp.url, e.code)
+                logging.error('%s hit -> %s (!!)', checkpoint.url, response.status_code)
+                failed.put(checkpoint)
 
-def check(checkpoints, timeout):
+
+def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, dyndns_credentials={}):
+    checkpoints = resolve_ips(urls) #TODO: green this?
     pool = eventlet.GreenPool()
     failed = eventlet.Queue()
-    for cp in checkpoints:
-        pool.spawn(check_url, cp, failed, timeout)
+    for checkpoint in checkpoints:
+        pool.spawn(check_url, checkpoint, failed, error_codes, timeout)
     pool.waitall()
     if not failed.empty():
-        records = [failed.get() for _ in xrange(failed.qsize())]
-        remove_records(records) #TODO: or return the records and call this elsewhere
+        records = list(failed.queue)
+        remove_records(records, dyndns_credentials=dyndns_credentials, dry_run=dry_run) #TODO: or return the records and call this elsewhere
+
+def healthcheck_daemon(urls, wait=60, error_codes=[], timeout=5, dry_run=False, dyndns_credentials={}):
+    pass
+    # TODO resolve_ips, for sleep ``wait`` check_url
 
