@@ -21,6 +21,7 @@ Features
   returns defined HTTP code (for example 500, by default turned off)
 * Dry run mode: Will not change the DynDNS recods. Outputs only ``curl`` commands
   instead.
+* Will not delete IPs from DynDNS, when all the IPs in the dns record fail.
 
 Installation
 ============
