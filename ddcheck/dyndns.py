@@ -45,6 +45,7 @@ class DynDns(object):
         self.user_name = user_name
         self.password = password
         self.dry_run = dry_run
+        self.rest_iface = None
         self.connect()
         self._changed_zones = set([])
 
@@ -60,7 +61,8 @@ class DynDns(object):
         }
         response = rest_iface.execute('/Session/', 'POST', arguments)
         if response['status'] != 'success':
-            sys.exit("Incorrect DynDns credentials")
+            logging.error('Incorrect DynDns credentials')
+            sys.exit(1)
         self.rest_iface = rest_iface
 
     def disconnect(self):
