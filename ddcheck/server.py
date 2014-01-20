@@ -49,6 +49,7 @@ def check_url(checkpoint, failed, error_codes, timeout):
 
 def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, dyndns_credentials={}):
     enable_ipv6 = detect_ipv6_support()
+    logging.info('IPv6 support... %s', enable_ipv6 and 'on' or 'off')
     checkpoints = resolve_ips(urls, ipv6=enable_ipv6) #TODO: green this?
     pool = eventlet.GreenPool()
     failed = eventlet.Queue()

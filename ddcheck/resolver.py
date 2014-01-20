@@ -21,7 +21,7 @@ def dig(qname, rdtype, nameservers=None):
 def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS, ipv6=True):
     types = ('A', 'AAAA')
     if not ipv6:
-        types = ('A,')
+        types = ('A',)
     ret = []
     for url in urls:
         logger.debug('Resolving %s', url)

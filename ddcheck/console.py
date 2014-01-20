@@ -32,7 +32,7 @@ def main():
     signal.signal(signal.SIGINT, shutdown)
 
     options = parse_arguments()
-    level = logging.WARNING
+    level = logging.INFO
     if options.debug:
         level = logging.DEBUG
     logging.basicConfig(format='%(asctime)s %(message)s', level=level)
