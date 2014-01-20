@@ -27,7 +27,7 @@ def check_url(checkpoint, failed, error_codes, timeout):
     response = None
     try:
         with Timeout(timeout, False):
-            response = requests.get(checkpoint.url, headers={'Host': checkpoint.host})
+            response = requests.get(checkpoint.url, headers={'Host': checkpoint.host}, allow_redirects=False)
     except requests.ConnectionError, e:
         logging.info('%s %s hit -> (timeout)', checkpoint.host, checkpoint.url)
         logging.debug('%s', e)
