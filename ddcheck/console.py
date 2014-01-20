@@ -7,6 +7,8 @@ import argparse
 
 from ddcheck.server import healthcheck
 
+from ddcheck.dyndns import DynDns, LogOnly
+
 
 
 def parse_arguments():
@@ -16,6 +18,7 @@ def parse_arguments():
     parser.add_argument('-e', '--error-codes', default='', help='HTTP codes considered as non-OK')
     parser.add_argument('-t', '--timeout', default=5, type=int, help='URL timeout')
     parser.add_argument('-D', '--dry-run', default=False, action='store_true', help='Do not really update the dyndns. Just print records to delete.')
+    parser.add_argument('-H', '--healthcheck-only', default=False, action='store_true', help='Do not really talk to any API. Just do a healthcheck and print rhe results.')
     parser.add_argument('--dynect-customer', default=None, help='Customer name in DynEct (defaults to DYNECT_CUSTOMER_NAME env variable)')
     parser.add_argument('--dynect-user', default=None, help='Username in DynEct (defaults to DYNECT_USER_NAME env variable)')
     parser.add_argument('--dynect-password', default=None, help='Password in DynEct (defaults to DYNECT_PASSWORD env variable)')
@@ -41,22 +44,27 @@ def main():
     if options.error_codes:
         error_codes = map(int, options.error_codes.split(','))
 
-    dyndns_credentials = {
-        'customer_name': options.dynect_customer or os.environ.get('DYNECT_CUSTOMER_NAME'),
-        'user_name': options.dynect_user or os.environ.get('DYNECT_USER_NAME'),
-        'password': options.dynect_password or os.environ.get('DYNECT_PASSWORD'),
-    }
-    if not dyndns_credentials['customer_name']:
-        print 'Dynect customer name not set. Use --dynect-customer or DYNECT_CUSTOMER_NAME'
-        sys.exit(1)
-    if not dyndns_credentials['user_name']:
-        print 'Dynect username not set. Use --dynect-user or DYNECT_USER_NAME'
-        sys.exit(1)
-    if not dyndns_credentials['password']:
-        print 'Dynect password not set. Use --dynect-password or DYNECT_PASSWORD'
-        sys.exit(1)
+    if options.healthcheck_only:
+        backend = LogOnly
+        dyndns_credentials = {}
+    else:
+        backend = DynDns
+        dyndns_credentials = {
+            'customer_name': options.dynect_customer or os.environ.get('DYNECT_CUSTOMER_NAME'),
+            'user_name': options.dynect_user or os.environ.get('DYNECT_USER_NAME'),
+            'password': options.dynect_password or os.environ.get('DYNECT_PASSWORD'),
+        }
+        if not dyndns_credentials['customer_name']:
+            print 'Dynect customer name not set. Use --dynect-customer or DYNECT_CUSTOMER_NAME'
+            sys.exit(1)
+        if not dyndns_credentials['user_name']:
+            print 'Dynect username not set. Use --dynect-user or DYNECT_USER_NAME'
+            sys.exit(1)
+        if not dyndns_credentials['password']:
+            print 'Dynect password not set. Use --dynect-password or DYNECT_PASSWORD'
+            sys.exit(1)
 
-    healthcheck(options.urls, error_codes=error_codes, timeout=options.timeout, dry_run=options.dry_run, dyndns_credentials=dyndns_credentials)
+    healthcheck(options.urls, error_codes=error_codes, timeout=options.timeout, dry_run=options.dry_run, backend_kwargs=dyndns_credentials, backend=backend)
 
 if __name__ == '__main__':
     main()

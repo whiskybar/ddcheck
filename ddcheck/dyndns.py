@@ -110,3 +110,13 @@ class DynDns(object):
         self.disconnect()
 
 
+class LogOnly(object):
+
+    def __init__(self, **kwargs):
+        pass
+
+    def remove_records(self, checkpoints):
+        for checkpoint in checkpoints:
+            logger.info('Detected down: %s %s', checkpoint.host, checkpoint.ip)
+
+
