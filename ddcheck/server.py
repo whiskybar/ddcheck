@@ -27,13 +27,16 @@ def check_url(checkpoint, failed, error_codes, timeout):
         with Timeout(timeout, False):
             response = requests.get(checkpoint.url, headers={'Host': checkpoint.host})
     except requests.ConnectionError, e:
-        logging.error('%s (%s) connection failed: %s', checkpoint.url, checkpoint.host, e)
+        logging.info('%s %s hit -> (timeout)', checkpoint.host, checkpoint.url)
+        logging.debug('%s', e)
         failed.put(checkpoint)
     except requests.HTTPError, e:
-        logging.error('%s (%s) HTTP error: %s', checkpoint.url, checkpoint.host, e)
+        logging.info('%s %s hit -> (error)', checkpoint.host, checkpoint.url)
+        logging.debug('%s', e)
         failed.put(checkpoint)
     except requests.RequestException, e:
-        logging.error('%s (%s) error: %s', checkpoint.url, checkpoint.host, e)
+        logging.info('%s %s hit -> (error)', checkpoint.host, checkpoint.url)
+        logging.debug('%s', e)
         failed.put(checkpoint)
     else:
         if response is None:
@@ -41,9 +44,9 @@ def check_url(checkpoint, failed, error_codes, timeout):
             failed.put(checkpoint)
         else:
             if response.status_code not in error_codes:
-                logging.debug('%s hit -> %s (OK)', checkpoint.url, response.status_code)
+                logging.info('%s %s hit -> %s (OK)', checkpoint.host, checkpoint.url, response.status_code)
             else:
-                logging.error('%s hit -> %s (!!)', checkpoint.url, response.status_code)
+                logging.info('%s %s hit -> %s (!!)', checkpoint.host, checkpoint.url, response.status_code)
                 failed.put(checkpoint)
 
 
