@@ -11,19 +11,23 @@ Checkpoint = namedtuple('checkpoint', ['url', 'host', 'record', 'ip', 'type'])
 logger = logging.getLogger()
 
 
-def _dig(qname, rdtype, nameservers):
+def dig(qname, rdtype, nameservers=None):
     resolver = dns.resolver.Resolver()
-    resolver.nameservers=[socket.gethostbyname(x) for x in nameservers]
+    if nameservers:
+        resolver.nameservers=[socket.gethostbyname(x) for x in nameservers]
     return resolver.query(qname, rdtype)
 
 
-def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS):
+def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS, ipv6=True):
+    types = ('A', 'AAAA')
+    if not ipv6:
+        types = ('A,')
     ret = []
     for url in urls:
         logger.debug('Resolving %s', url)
         scheme, netloc, url, params, query, fragment = urlparse(url)
-        for record_type in ['A', 'AAAA']:
-            answer = _dig(netloc, record_type, nameservers=nameservers)
+        for record_type in types:
+            answer = dig(netloc, record_type, nameservers=nameservers)
             record = answer.rrset.name.to_text()
             for rdata in answer:
                 if record_type == 'AAAA':

@@ -2,7 +2,7 @@ from nose import tools
 from mock import MagicMock, patch
 import dns.resolver
 
-from ddcheck.resolver import resolve_ips, Checkpoint, _dig
+from ddcheck.resolver import resolve_ips, Checkpoint, dig
 
 
 
@@ -13,7 +13,7 @@ class FakeDnsAnswer(list):
         super(FakeDnsAnswer, self).__init__([MagicMock(address = i) for i in data])
 
 
-@patch('ddcheck.resolver._dig')
+@patch('ddcheck.resolver.dig')
 def test_resolve_ips(dig):
     dig.side_effect = [
             FakeDnsAnswer(['173.194.70.104', '173.194.70.147', '173.194.70.106', '173.194.70.99'], name='www.google.com.', type='A'),

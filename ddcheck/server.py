@@ -5,9 +5,20 @@ from eventlet.timeout import Timeout
 
 requests = eventlet.patcher.import_patched('requests.__init__')
 
-from ddcheck.resolver import resolve_ips
+from ddcheck.resolver import resolve_ips, dig
 from ddcheck.dyndns import DynDns
 
+
+
+REFERENCE_IPV6_HOSTNAME = 'google.com'
+def detect_ipv6_support():
+    answer = dig(REFERENCE_IPV6_HOSTNAME, 'AAAA')
+    address = answer[0].address
+    try:
+        response = requests.get('http://[%s]/' % address)
+        return response.status_code == 200
+    except:
+        return False
 
 
 def check_url(checkpoint, failed, error_codes, timeout):
@@ -37,7 +48,8 @@ def check_url(checkpoint, failed, error_codes, timeout):
 
 
 def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, dyndns_credentials={}):
-    checkpoints = resolve_ips(urls) #TODO: green this?
+    enable_ipv6 = detect_ipv6_support()
+    checkpoints = resolve_ips(urls, ipv6=enable_ipv6) #TODO: green this?
     pool = eventlet.GreenPool()
     failed = eventlet.Queue()
     dyndns = DynDns(dry_run=dry_run, **dyndns_credentials)
