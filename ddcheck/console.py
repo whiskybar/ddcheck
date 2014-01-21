@@ -30,15 +30,26 @@ def shutdown(signal, frame):
     sys.exit(0)
 
 
+def configure_logging(options):
+    level = logging.DEBUG if options.debug else logging.INFO
+    logging.basicConfig(format='%(asctime)s ddcheck: %(message)s', level=level)
+
+    handler = logging.handlers.SysLogHandler(
+        address='/dev/log',
+        facility=logging.handlers.SysLogHandler.LOG_SYSLOG,
+    )
+    handler.setFormatter(logging.Formatter('ddcheck: %(message)s'))
+
+    rootLogger = logging.getLogger('')
+    rootLogger.setLevel(level)
+    rootLogger.addHandler(handler)
+
 def main():
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
     options = parse_arguments()
-    level = logging.INFO
-    if options.debug:
-        level = logging.DEBUG
-    logging.basicConfig(format='%(asctime)s %(message)s', level=level)
+    configure_logging(options)
 
     error_codes = []
     if options.error_codes:
