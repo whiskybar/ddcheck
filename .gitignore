@@ -3,6 +3,8 @@
 
 .*.sw?
 
-*.egg
-*.egg-info
+/*.egg
+/*.egg-info
+/build/
+/dist/
 

@@ -1,0 +1,4 @@
+recursive-include ddcheck *
+global-exclude *.py[co]
+include README.rst
+prune test_ddcheck
