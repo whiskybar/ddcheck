@@ -52,7 +52,7 @@ def check_url(checkpoint, failed, error_codes, timeout):
                 failed.put(checkpoint)
 
 
-def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, backend_kwargs={}, backend=DynDns):
+def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, backend_kwargs={}, backend=DynDns, beat=None):
     enable_ipv6 = detect_ipv6_support()
     logging.info('IPv6 support... %s', enable_ipv6 and 'on' or 'off')
 
@@ -60,18 +60,21 @@ def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, backend_kwargs={
     failed = eventlet.Queue()
     backend_instance = backend(dry_run=dry_run, **backend_kwargs)
 
-    checkpoints = resolve_ips(urls, ipv6=enable_ipv6) #TODO: green this?
+    while True:
+        started = time.time()
 
-    for checkpoint in checkpoints:
-        pool.spawn(check_url, checkpoint, failed, error_codes, timeout)
-    pool.waitall()
+        checkpoints = resolve_ips(urls, ipv6=enable_ipv6) #TODO: green this
+        for checkpoint in checkpoints:
+            pool.spawn(check_url, checkpoint, failed, error_codes, timeout)
+        pool.waitall()
 
-    if not failed.empty():
-        records = list(failed.queue)
-        backend_instance.remove_records(records) #TODO: or return the records and call this elsewhere
+        if not failed.empty():
+            records = list(failed.queue)
+            backend_instance.remove_records(records)
 
+        if beat is None:
+            break
 
-def healthcheck_daemon(urls, wait=60, error_codes=[], timeout=5, dry_run=False, dyndns_credentials={}):
-    pass
-    # TODO resolve_ips, for sleep ``wait`` check_url
-
+        wait = started + beat - time.time()
+        if wait > 0:
+           eventlet.sleep(wait)
