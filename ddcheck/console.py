@@ -6,7 +6,7 @@ import logging.handlers
 import argparse
 
 from ddcheck.server import healthcheck
-
+from ddcheck.exceptions import InvalidCredentialsError
 from ddcheck.dyndns import DynDns, LogOnly
 
 

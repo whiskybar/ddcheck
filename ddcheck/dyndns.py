@@ -4,7 +4,7 @@ from collections import defaultdict
 from dynect.DynectDNS import DynectRest
 
 from ddcheck.utils import get_zone
-from ddcheck.execptions import InvalidCredentialsError
+from ddcheck.exceptions import InvalidCredentialsError
 
 
 
