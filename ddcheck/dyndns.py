@@ -3,6 +3,8 @@ import logging
 from collections import defaultdict
 from dynect.DynectDNS import DynectRest
 
+from ddcheck.utils import get_zone
+
 
 
 logger = logging.getLogger()
@@ -98,7 +100,7 @@ class DynDns(object):
     def remove_records(self, checkpoints):
         zones = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         for checkpoint in checkpoints:
-            zone = '.'.join(checkpoint.record.rsplit('.', 3)[1:])
+            zone = get_zone(checkpoint.record)
             zones[zone][checkpoint.record][checkpoint.type].append(checkpoint)
         for zone, records in zones.iteritems():
             for record, types in records.iteritems():
