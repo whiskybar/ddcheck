@@ -32,7 +32,7 @@ def shutdown(signal, frame):
 
 def configure_logging(options):
     level = logging.DEBUG if options.debug else logging.INFO
-    logging.basicConfig(format='%(asctime)s ddcheck: %(message)s', level=level)
+    logging.basicConfig(format='%(asctime)s ddcheck: [%(levelname)s] %(message)s', level=level)
 
     handler = logging.handlers.SysLogHandler(
         address='/dev/log',
