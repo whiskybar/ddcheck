@@ -56,7 +56,6 @@ def test_resolve_ips():
                     'http://www.example.com/test/',
                     'http://web.mit.edu/health/', # CNAME
                 ],
-                ['8.8.8.8'],
             )
         )
     )
@@ -82,7 +81,6 @@ def test_resolve_ips_ipv6_disabled():
                     'http://www.example.com/test/',
                     'http://web.mit.edu/health/', # CNAME
                 ],
-                ['8.8.8.8'],
                 ipv6=False,
             )
         )

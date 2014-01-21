@@ -8,7 +8,6 @@ from ddcheck.utils import get_zone
 
 
 
-DYNDNS_NAMESERVERS = ['ns4.p30.dynect.net', 'ns1.p30.dynect.net', 'ns2.p30.dynect.net', 'ns3.p30.dynect.net']
 Checkpoint = namedtuple('checkpoint', ['url', 'host', 'record', 'ip', 'type'])
 logger = logging.getLogger()
 
@@ -20,7 +19,7 @@ def dig(qname, rdtype, nameservers=None):
     return resolver.query(qname, rdtype)
 
 
-def resolve_ips(urls, nameservers=DYNDNS_NAMESERVERS, ipv6=True):
+def resolve_ips(urls, ipv6=True):
     types = ('A', 'AAAA')
     if not ipv6:
         types = ('A',)
