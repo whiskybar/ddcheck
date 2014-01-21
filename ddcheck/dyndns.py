@@ -4,6 +4,7 @@ from collections import defaultdict
 from dynect.DynectDNS import DynectRest
 
 from ddcheck.utils import get_zone
+from ddcheck.execptions import InvalidCredentialsError
 
 
 
@@ -64,7 +65,7 @@ class DynDns(object):
         response = rest_iface.execute('/Session/', 'POST', arguments)
         if response['status'] != 'success':
             logging.error('Incorrect DynDns credentials')
-            sys.exit(1)
+            raise InvalidCredentialsError('Incorrect DynDns credentials')
         self.rest_iface = rest_iface
 
     def disconnect(self):
