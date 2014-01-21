@@ -6,7 +6,7 @@ import logging.handlers
 import argparse
 
 from ddcheck.server import healthcheck
-
+from ddcheck.exceptions import InvalidCredentialsError
 from ddcheck.dyndns import DynDns, LogOnly
 
 
@@ -75,7 +75,11 @@ def main():
             print 'Dynect password not set. Use --dynect-password or DYNECT_PASSWORD'
             sys.exit(1)
 
-    healthcheck(options.urls, error_codes=error_codes, timeout=options.timeout, dry_run=options.dry_run, backend_kwargs=dyndns_credentials, backend=backend)
+    try:
+        healthcheck(options.urls, error_codes=error_codes, timeout=options.timeout, dry_run=options.dry_run, backend_kwargs=dyndns_credentials, backend=backend)
+    except InvalidCredentialsError:
+        sys.exit(1)
+
 
 if __name__ == '__main__':
     main()
