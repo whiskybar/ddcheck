@@ -13,6 +13,7 @@ logger = logging.getLogger()
 
 
 def dig(qname, rdtype, nameservers=None):
+    logger.debug('Digging %s %s %s', qname, rdtype, nameservers)
     resolver = dns.resolver.Resolver()
     if nameservers:
         resolver.nameservers=[socket.gethostbyname(x) for x in nameservers]
