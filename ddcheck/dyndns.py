@@ -84,7 +84,8 @@ class DynDns(object):
         for url, record in current_addresess:
             if record['rdata']['address'] in addresses:
                 to_delete.append((url, record['rdata']['address']))
-            logging.debug('Unknown address: %s', record)
+            else:
+                logging.debug('Unknown address: %s (zone defines: %s)', record['rdata']['address'], current_addresess)
         if len(current_addresess) > len(to_delete):
             for url, address in to_delete:
                 logging.info('%s (%s) seems down. Removing', addresses, name)
