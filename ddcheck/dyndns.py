@@ -4,7 +4,7 @@ from collections import defaultdict
 from dynect.DynectDNS import DynectRest
 
 from ddcheck.utils import get_zone
-from ddcheck.exceptions import InvalidCredentialsError
+from ddcheck.exceptions import InvalidCredentialsError, ZoneDoesNotExistError
 
 
 
@@ -36,10 +36,9 @@ class DynectRestDry(DynectRest):
         }
 
     def execute(self, uri, method, args=None):
-        if method in ['DELETE', 'PUT']:
-            self.output_curl(uri, method, args)
-        else:
-            return super(DynectRestDry, self).execute(uri, method, args)
+        if method in ['DELETE', 'PUT'] and not uri.startswith('/Session/'):
+            return self.output_curl(uri, method, args)
+        return super(DynectRestDry, self).execute(uri, method, args)
 
 
 class DynDns(object):
@@ -85,6 +84,7 @@ class DynDns(object):
         for url, record in current_addresess:
             if record['rdata']['address'] in addresses:
                 to_delete.append((url, record['rdata']['address']))
+            logging.debug('Unknown address: %s', record)
         if len(current_addresess) > len(to_delete):
             for url, address in to_delete:
                 logging.info('%s (%s) seems down. Removing', addresses, name)
@@ -98,11 +98,27 @@ class DynDns(object):
             self.rest_iface.execute('/Zone/%s/' % zone, 'PUT', {'publish': 'true'})
             self._changed_zones.remove(zone)
 
+    def list_zones(self):
+        ret = []
+        for url in self.rest_iface.execute('/Zone/', 'GET')['data']:
+            ret.append(self.rest_iface.execute(url, 'GET')['data']['zone'])
+        return ret
+
     def remove_records(self, checkpoints):
+        # sort records by zone, record, type
         zones = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         for checkpoint in checkpoints:
             zone = get_zone(checkpoint.record)
             zones[zone][checkpoint.record][checkpoint.type].append(checkpoint)
+
+        # sanity check (not removing unknow zones)
+        dyndns_zones = self.list_zones()
+        for zone in zones.keys():
+            if zone not in dyndns_zones:
+                logger.error('Zone %s is not managed by this DynDns account', zone)
+                raise ZoneDoesNotExistError('Zone %s is not managed by this DynDns account', zone)
+
+        # remove the IPs
         for zone, records in zones.iteritems():
             for record, types in records.iteritems():
                 for type, checkpoints in types.iteritems():
