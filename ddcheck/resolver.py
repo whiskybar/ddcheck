@@ -5,6 +5,7 @@ from urlparse import urlparse, urlunparse
 from collections import namedtuple
 
 from ddcheck.utils import get_zone
+from ddcheck.exceptions import InvalidUrlFormat
 
 
 
@@ -41,6 +42,9 @@ def resolve_ips(urls, ipv6=True):
     for url in urls:
         logger.debug('Resolving %s', url)
         scheme, netloc, url, params, query, fragment = urlparse(url)
+        if not scheme:
+            logger.error('"%s" does not seem like a valid URL', url)
+            raise InvalidUrlFormat('"%s" does not seem like a valid URL' % url)
         for record_type in types:
             answer = resolve_hostname(netloc, record_type)
             record = answer.rrset.name.to_text()

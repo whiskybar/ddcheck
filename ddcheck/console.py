@@ -6,7 +6,7 @@ import logging.handlers
 import argparse
 
 from ddcheck.server import healthcheck
-from ddcheck.exceptions import InvalidCredentialsError, ZoneDoesNotExistError
+from ddcheck.exceptions import DdCheckError
 from ddcheck.dyndns import DynDns, LogOnly
 
 
@@ -78,7 +78,7 @@ def main():
 
     try:
         healthcheck(options.urls, error_codes=error_codes, timeout=options.timeout, dry_run=options.dry_run, backend_kwargs=dyndns_credentials, backend=backend, beat=options.beat_interval)
-    except (InvalidCredentialsError, ZoneDoesNotExistError), e:
+    except DdCheckError, e:
         sys.exit(1)
 
 
