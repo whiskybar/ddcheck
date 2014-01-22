@@ -1,4 +1,3 @@
-import sys
 import logging
 from collections import defaultdict
 from dynect.DynectDNS import DynectRest

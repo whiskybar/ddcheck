@@ -77,7 +77,7 @@ def main():
             sys.exit(1)
 
     try:
-        healthcheck(options.urls, error_codes=error_codes, timeout=options.timeout, dry_run=options.dry_run, backend_kwargs=dyndns_credentials, backend=backend, beat=options.beat)
+        healthcheck(options.urls, error_codes=error_codes, timeout=options.timeout, dry_run=options.dry_run, backend_kwargs=dyndns_credentials, backend=backend, beat=options.beat_interval)
     except (InvalidCredentialsError, ZoneDoesNotExistError), e:
         sys.exit(1)
 
