@@ -11,6 +11,7 @@ from ddcheck.dyndns import DynDns
 
 
 
+logger = logging.getLogger()
 REFERENCE_IPV6_HOSTNAME = 'google.com'
 
 
@@ -78,4 +79,6 @@ def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, backend_kwargs={
 
         wait = started + beat - time.time()
         if wait > 0:
-           eventlet.sleep(wait)
+            logger.debug('Waiting for %s seconds' % wait)
+            eventlet.sleep(wait)
+            failed = eventlet.Queue()
