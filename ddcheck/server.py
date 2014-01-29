@@ -6,7 +6,8 @@ from eventlet.timeout import Timeout
 
 requests = eventlet.patcher.import_patched('requests.__init__')
 
-from ddcheck.resolver import resolve_ips, dig
+from ddcheck.resolver import dig
+from ddcheck.checkpoints import load_checkpoints
 from ddcheck.dyndns import DynDns
 
 
@@ -54,7 +55,7 @@ def check_url(checkpoint, failed, error_codes, timeout):
                 failed.put(checkpoint)
 
 
-def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, backend_kwargs={}, backend=DynDns, beat=None):
+def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwargs={}, backend=DynDns, beat=None, json_file=None):
     enable_ipv6 = detect_ipv6_support()
     logging.info('IPv6 support... %s', enable_ipv6 and 'on' or 'off')
 
@@ -65,7 +66,11 @@ def healthcheck(urls, error_codes=[], timeout=5, dry_run=False, backend_kwargs={
     while True:
         started = time.time()
 
-        checkpoints = resolve_ips(urls, ipv6=enable_ipv6) #TODO: green this
+        checkpoints = load_checkpoints(urls=urls, json_file=json_file, ipv6=enable_ipv6)
+        if not checkpoints:
+            logger.info('No checkpoints found.')
+            return
+
         for checkpoint in checkpoints:
             pool.spawn(check_url, checkpoint, failed, error_codes, timeout)
         pool.waitall()

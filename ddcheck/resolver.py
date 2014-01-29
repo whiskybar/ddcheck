@@ -2,14 +2,13 @@ import logging
 import socket
 import dns.resolver
 from urlparse import urlparse, urlunparse
-from collections import namedtuple
 
 from ddcheck.utils import get_zone
 from ddcheck.exceptions import InvalidUrlFormat
+from ddcheck.types import Checkpoint
 
 
 
-Checkpoint = namedtuple('checkpoint', ['url', 'host', 'record', 'ip', 'type'])
 logger = logging.getLogger()
 
 
