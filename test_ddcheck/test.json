@@ -1,0 +1,15 @@
+{
+    "endpoints": {
+        "test1": {
+            "hostname": "test.example.com",
+            "ipv4": ["127.0.0.1", "127.0.0.2", "127.0.0.3"],
+            "ipv6": ["::1", "::2", "::3"],
+            "check_path": "/health_check/"
+        },
+        "test2": {
+            "hostname": "dev.example.com",
+            "ipv4": ["127.0.0.10", "127.0.0.20", "127.0.0.30"],
+            "check_path": "/test/"
+        }
+    }
+}
