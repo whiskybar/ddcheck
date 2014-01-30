@@ -92,7 +92,7 @@ class DynDns(object):
 
         # sanity check
         if all_down:
-            logging.warning('All IPs (%s) for the record (%s) seems down. Doing nothing.', ", ".join(to_delete), name)
+            logging.warning('All IPs (%s) for the record (%s) seem down. Ignoring.', ", ".join(to_delete), name)
             return
         # add new ones
         for a in to_add:
