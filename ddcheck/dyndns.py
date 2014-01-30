@@ -75,6 +75,8 @@ class DynDns(object):
         ret = {}
         for url in self.rest_iface.execute('/%sRecord/%s/%s/' % (type, zone, name), 'GET')['data']:
             ret[url] = self.rest_iface.execute(url, 'GET')['data']
+        import pprint
+        pprint.pprint(ret)
         return ret
 
     def sync_addresses(self, zone, name, failed_addresses, passed_addresses, enable_readd, type):

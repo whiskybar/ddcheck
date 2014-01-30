@@ -115,5 +115,49 @@ class TestDynDns():
             ])
         )
 
+    def test_remove_records_with_enabled_readd_feature(self):
+        dyndns = DynDns(
+            dry_run=False,
+            customer_name=self.customer_name,
+            user_name=self.user_name,
+            password=self.password,
+        )
+        dyndns.sync_records(
+            failed=[
+                Checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1', type='A'), # remove this
+                Checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'), # remove this
+                Checkpoint(url='http://127.0.0.104/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'), # non existent
+                Checkpoint(url='http://[::2]/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='::2', type='AAAA'), # ipv6
+            ],
+            passed=[
+                Checkpoint(url='http://127.0.0.2/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.2', type='A'), # remove this
+                Checkpoint(url='http://127.0.0.3/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.3', type='A'), # remove this
+                Checkpoint(url='http://[::1]/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='::1', type='AAAA'), # ipv6
+            ],
+            enable_readd=True,
+        )
 
 
+        # IPv4 removed
+        tools.assert_equal(
+            set([
+                '127.0.0.2',
+                '127.0.0.3',
+            ]),
+            set([
+                self.rest_iface.execute(url, 'GET')['data']['rdata']['address']
+                for url in
+                self.rest_iface.execute('/ARecord/%s/root.%s/' % (self.zone, self.zone), 'GET')['data']
+            ])
+        )
+        # IPv6 removed
+        tools.assert_equal(
+            set([
+                '::1',
+            ]),
+            set([
+                self.rest_iface.execute(url, 'GET')['data']['rdata']['address']
+                for url in
+                self.rest_iface.execute('/AAAARecord/%s/root.%s/' % (self.zone, self.zone), 'GET')['data']
+            ])
+        )
