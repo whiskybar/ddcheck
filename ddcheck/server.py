@@ -78,7 +78,9 @@ def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwa
             pool.spawn(check_url, checkpoint, failed, passed, error_codes, timeout)
         pool.waitall()
 
-        backend_instance.sync_records(failed=list(failed.queue), passed=list(passed.queue), enable_readd=enable_readd)
+        failed_list = [failed.get_nowait() for _ in xrange(failed.qsize())]
+        passed_list = [passed.get_nowait() for _ in xrange(passed.qsize())]
+        backend_instance.sync_records(failed=failed_list, passed=passed_list, enable_readd=enable_readd)
 
         if beat is None:
             break
@@ -87,5 +89,3 @@ def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwa
         if wait > 0:
             logger.debug('Waiting for %s seconds' % wait)
             eventlet.sleep(wait)
-            failed = eventlet.Queue()
-            passed = eventlet.Queue()
