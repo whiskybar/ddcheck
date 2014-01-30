@@ -77,24 +77,35 @@ class DynDns(object):
             ret[url] = self.rest_iface.execute(url, 'GET')['data']
         return ret
 
-    def remove_addresses(self, zone, name, addresses, type):
-        current_addresess = self.zone_addresses(zone, name, type).items()
-        to_delete = []
-        for url, record in current_addresess:
-            if record['rdata']['address'] in addresses:
-                to_delete.append((url, record['rdata']['address']))
-            else:
-                logging.debug('Unknown address: %s (zone defines: %s)', record['rdata']['address'], current_addresess)
-        if len(current_addresess) > len(to_delete):
-            for url, address in to_delete:
-                logging.info('%s (%s) seems down. Removing', addresses, name)
-                self.rest_iface.execute(url, 'DELETE')
-                self._changed_zones.add(zone)
+    def sync_addresses(self, zone, name, failed_addresses, passed_addresses, enable_readd, type):
+        current_addresess = dict((r['rdata']['address'], url) for url, r in self.zone_addresses(zone, name, type).items())
+
+        if enable_readd:
+            to_delete = set(a for a in current_addresess if a not in passed_addresses)
+            to_add = set(a for a in passed_addresses if a not in current_addresess)
         else:
-            logging.warning('All IPs (%s) for the record (%s) seems down. Doing nothing.', ", ".join(addresses), name)
+            to_add = set()
+            to_delete = set(a for a in current_addresess if a in failed_addresses)
+        all_down = not(len(current_addresess) + len(to_add) - len(to_delete) > 0)
+
+        # sanity check
+        if all_down:
+            logging.warning('All IPs (%s) for the record (%s) seems down. Doing nothing.', ", ".join(to_delete), name)
+            return
+        # add new ones
+        for a in to_add:
+            logging.info('%s (%s) seems up. Adding.', a, name)
+            self.rest_iface.execute('/ARecord/%s/%s/' % (zone, name), 'POST', {'rdata': {'address': a}})
+            self._changed_zones.add(zone)
+        # remove old ones
+        for a in to_delete:
+            logging.info('%s (%s) seems down. Removing.', a, name)
+            self.rest_iface.execute(current_addresess[a], 'DELETE')
+            self._changed_zones.add(zone)
 
     def publish(self, zone):
         if zone in self._changed_zones:
+            logger.debug('Commiting changes to zone %s', zone)
             self.rest_iface.execute('/Zone/%s/' % zone, 'PUT', {'publish': 'true'})
             self._changed_zones.remove(zone)
 
@@ -104,12 +115,15 @@ class DynDns(object):
             ret.append(self.rest_iface.execute(url, 'GET')['data']['zone'])
         return ret
 
-    def remove_records(self, checkpoints):
+    def sync_records(self, failed, passed, enable_readd):
         # sort records by zone, record, type
-        zones = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-        for checkpoint in checkpoints:
+        zones = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(list))))
+        for checkpoint in failed:
             zone = get_zone(checkpoint.record)
-            zones[zone][checkpoint.record][checkpoint.type].append(checkpoint)
+            zones[zone][checkpoint.record][checkpoint.type]['failed'].append(checkpoint)
+        for checkpoint in passed:
+            zone = get_zone(checkpoint.record)
+            zones[zone][checkpoint.record][checkpoint.type]['passed'].append(checkpoint)
 
         # sanity check (not removing unknow zones)
         dyndns_zones = self.list_zones()
@@ -118,12 +132,19 @@ class DynDns(object):
                 logger.error('Zone %s is not managed by this DynDns account', zone)
                 raise ZoneDoesNotExistError('Zone %s is not managed by this DynDns account', zone)
 
-        # remove the IPs
+        # sync IPs
         for zone, records in zones.iteritems():
             for record, types in records.iteritems():
                 for type, checkpoints in types.iteritems():
-                    self.remove_addresses(zone=zone, name=record, addresses=[cp.ip for cp in checkpoints], type=type)
+                    self.sync_addresses(
+                        zone=zone,
+                        name=record,
+                        failed_addresses=[cp.ip for cp in checkpoints['failed']],
+                        passed_addresses=[cp.ip for cp in checkpoints['passed']],
+                        enable_readd=enable_readd,
+                        type=type)
             self.publish(zone)
+
 
     def __del__(self):
         self.disconnect()
@@ -134,8 +155,12 @@ class LogOnly(object):
     def __init__(self, **kwargs):
         pass
 
-    def remove_records(self, checkpoints):
-        for checkpoint in checkpoints:
-            logger.info('Detected down: %s %s', checkpoint.host, checkpoint.ip)
+    def sync_records(self, failed, passed, enable_readd):
+        logger.info('Readd feature is %s', enable_readd and 'enabled' or 'disabled')
+        for checkpoint in failed:
+            logger.info('Detected DOWN: %s %s', checkpoint.host, checkpoint.ip)
+        for checkpoint in passed:
+            logger.info('Detected UP: %s %s', checkpoint.host, checkpoint.ip)
+
 
 

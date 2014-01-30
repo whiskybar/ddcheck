@@ -26,7 +26,7 @@ def detect_ipv6_support():
         return False
 
 
-def check_url(checkpoint, failed, error_codes, timeout):
+def check_url(checkpoint, failed, passed, error_codes, timeout):
     response = None
     try:
         with Timeout(timeout, False):
@@ -50,6 +50,7 @@ def check_url(checkpoint, failed, error_codes, timeout):
         else:
             if response.status_code not in error_codes:
                 logging.info('%s %s hit -> %s (OK)', checkpoint.host, checkpoint.url, response.status_code)
+                passed.put(checkpoint)
             else:
                 logging.info('%s %s hit -> %s (!!)', checkpoint.host, checkpoint.url, response.status_code)
                 failed.put(checkpoint)
@@ -57,10 +58,12 @@ def check_url(checkpoint, failed, error_codes, timeout):
 
 def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwargs={}, backend=DynDns, beat=None, json_file=None):
     enable_ipv6 = detect_ipv6_support()
+    enable_readd = bool(json_file)
     logging.info('IPv6 support... %s', enable_ipv6 and 'on' or 'off')
 
     pool = eventlet.GreenPool()
     failed = eventlet.Queue()
+    passed = eventlet.Queue()
     backend_instance = backend(dry_run=dry_run, **backend_kwargs)
 
     while True:
@@ -72,12 +75,10 @@ def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwa
             return
 
         for checkpoint in checkpoints:
-            pool.spawn(check_url, checkpoint, failed, error_codes, timeout)
+            pool.spawn(check_url, checkpoint, failed, passed, error_codes, timeout)
         pool.waitall()
 
-        if not failed.empty():
-            records = list(failed.queue)
-            backend_instance.remove_records(records)
+        backend_instance.sync_records(failed=list(failed.queue), passed=list(passed.queue), enable_readd=enable_readd)
 
         if beat is None:
             break
@@ -87,3 +88,4 @@ def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwa
             logger.debug('Waiting for %s seconds' % wait)
             eventlet.sleep(wait)
             failed = eventlet.Queue()
+            passed = eventlet.Queue()

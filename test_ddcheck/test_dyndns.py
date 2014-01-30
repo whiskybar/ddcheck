@@ -36,21 +36,24 @@ class TestDynDns():
         self.rest_iface.execute('/CNAMERecord/%s/cname2.%s/' % (self.zone, self.zone), 'POST', {'rdata': {'cname': 'cname1.%s.' % self.zone}, 'ttl': 10})
         self.rest_iface.execute('/Zone/%s/' % self.zone, 'PUT', {'publish': 'true'})
 
-    def test_remove_records(self):
+    def test_remove_records_with_disabled_readd_feature(self):
         dyndns = DynDns(
             dry_run=False,
             customer_name=self.customer_name,
             user_name=self.user_name,
             password=self.password,
         )
-        dyndns.remove_records(
-            [
-                Checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1', type='A'),
-                Checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'),
+        dyndns.sync_records(
+            failed=[
+                Checkpoint(url='http://127.0.0.1/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1', type='A'), # remove this
+                Checkpoint(url='http://127.0.0.4/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'), # remove this
                 Checkpoint(url='http://127.0.0.104/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'), # non existent
                 Checkpoint(url='http://[::2]/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='::2', type='AAAA'), # ipv6
             ],
+            passed=[],
+            enable_readd=False,
         )
+
         # IPv4 removed
         tools.assert_equal(
             set([
@@ -91,11 +94,13 @@ class TestDynDns():
                 self.rest_iface.execute('/CNAMERecord/%s/cname2.%s/' % (self.zone, self.zone), 'GET')['data']
             ]
         )
-        dyndns.remove_records(
-            [
+        dyndns.sync_records(
+            failed=[
                 Checkpoint(url='http://127.0.0.2/health/', host='cname2.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.1', type='A'),
                 Checkpoint(url='http://127.0.0.3/health/', host='root.%s' % self.zone, record='root.%s.' % self.zone, ip='127.0.0.4', type='A'),
             ],
+            passed=[],
+            enable_readd=False,
         )
         # IPv4 not removed - we are not deleting when all records fails
         tools.assert_equal(
