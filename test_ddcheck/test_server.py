@@ -8,13 +8,12 @@ from ddcheck.server import check_url
 def test_non_existing_host_get_to_failed():
     checkpoint = Checkpoint(url='http://127.0.0.1/', host='this.really.does.not.exist', record='this.really.does.not.exist.', ip='127.0.0.1', type='A')
 
-    failed = eventlet.Queue()
-    passed = eventlet.Queue()
+    failed, passed = [], []
     error_codes = []
     check_url(checkpoint, failed, passed, error_codes, 100)
 
-    tools.assert_equals([checkpoint], list(failed.queue))
-    tools.assert_equals([], list(passed.queue))
+    tools.assert_equals([checkpoint], failed)
+    tools.assert_equals([], passed)
 
 @responses.activate
 def test_error_not_in_error_codes_should_pass():
@@ -24,13 +23,12 @@ def test_error_not_in_error_codes_should_pass():
                   body='{"error": "not found"}', status=404,
                   content_type='application/json')
 
-    failed = eventlet.Queue()
-    passed = eventlet.Queue()
+    failed, passed = [], []
     error_codes = []
 
     check_url(checkpoint, failed, passed, error_codes, 100)
-    tools.assert_equals([], list(failed.queue))
-    tools.assert_equals([checkpoint], list(passed.queue))
+    tools.assert_equals([], failed)
+    tools.assert_equals([checkpoint], passed)
 
 @responses.activate
 def test_when_an_error_is_specified_put_checkpoint_to_failures():
@@ -40,11 +38,10 @@ def test_when_an_error_is_specified_put_checkpoint_to_failures():
                   body='{"error": "not found"}', status=404,
                   content_type='application/json')
 
-    failed = eventlet.Queue()
-    passed = eventlet.Queue()
+    failed, passed = [], []
     error_codes = [404]
 
     check_url(checkpoint, failed, passed, error_codes, 100)
-    tools.assert_equals([checkpoint], list(failed.queue))
-    tools.assert_equals([], list(passed.queue))
+    tools.assert_equals([checkpoint], failed)
+    tools.assert_equals([], passed)
 

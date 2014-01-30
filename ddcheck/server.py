@@ -34,26 +34,26 @@ def check_url(checkpoint, failed, passed, error_codes, timeout):
     except requests.ConnectionError, e:
         logging.info('%s %s hit -> (timeout)', checkpoint.host, checkpoint.url)
         logging.debug('%s', e)
-        failed.put(checkpoint)
+        failed.append(checkpoint)
     except requests.HTTPError, e:
         logging.info('%s %s hit -> (error)', checkpoint.host, checkpoint.url)
         logging.debug('%s', e)
-        failed.put(checkpoint)
+        failed.append(checkpoint)
     except requests.RequestException, e:
         logging.info('%s %s hit -> (error)', checkpoint.host, checkpoint.url)
         logging.debug('%s', e)
-        failed.put(checkpoint)
+        failed.append(checkpoint)
     else:
         if response is None:
             logging.warning('%s timed out after %d seconds', checkpoint.url, timeout)
-            failed.put(checkpoint)
+            failed.append(checkpoint)
         else:
             if response.status_code not in error_codes:
                 logging.info('%s %s hit -> %s (OK)', checkpoint.host, checkpoint.url, response.status_code)
-                passed.put(checkpoint)
+                passed.append(checkpoint)
             else:
                 logging.info('%s %s hit -> %s (!!)', checkpoint.host, checkpoint.url, response.status_code)
-                failed.put(checkpoint)
+                failed.append(checkpoint)
 
 
 def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwargs={}, backend=DynDns, beat=None, json_file=None):
@@ -62,8 +62,7 @@ def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwa
     logging.info('IPv6 support... %s', enable_ipv6 and 'on' or 'off')
 
     pool = eventlet.GreenPool()
-    failed = eventlet.Queue()
-    passed = eventlet.Queue()
+    failed, passed = [], []
     backend_instance = backend(dry_run=dry_run, **backend_kwargs)
 
     while True:
@@ -78,7 +77,7 @@ def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwa
             pool.spawn(check_url, checkpoint, failed, passed, error_codes, timeout)
         pool.waitall()
 
-        backend_instance.sync_records(failed=list(failed.queue), passed=list(passed.queue), enable_readd=enable_readd)
+        backend_instance.sync_records(failed=failed, passed=passed, enable_readd=enable_readd)
 
         if beat is None:
             break
@@ -87,5 +86,5 @@ def healthcheck(urls=None, error_codes=[], timeout=5, dry_run=False, backend_kwa
         if wait > 0:
             logger.debug('Waiting for %s seconds' % wait)
             eventlet.sleep(wait)
-            failed = eventlet.Queue()
-            passed = eventlet.Queue()
+        failed.clear()
+        passed.clear()
